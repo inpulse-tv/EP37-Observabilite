@@ -1,13 +1,12 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-
 version: '3.9'
-x-default-logging: &logging
-  driver: "json-file"
+x-default-logging:
+  &logging
+  driver: "fluentd"
   options:
-    max-size: "5m"
-    max-file: "2"
+    fluentd-async: "true"
 
 networks:
   default:
@@ -599,6 +598,14 @@ services:
       - METRICS_STORAGE_TYPE=prometheus
     logging: *logging
 
+  # Loki
+  loki:
+    image: grafana/loki:2.8.0
+    container_name: loki
+    ports:
+      - "3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
   # Grafana
   grafana:
     image: grafana/grafana:9.4.7
@@ -628,12 +635,10 @@ services:
       - ./src/otelcollector/otelcol-config.yml:/etc/otelcol-config.yml
       - ./src/otelcollector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
     ports:
-      - "4317"          # OTLP over gRPC receiver
-      - "4318:4318"     # OTLP over HTTP receiver
-      - "9464"          # Prometheus exporter
-      - "8888"          # metrics endpoint
+      - "24224:8006" # fluentd endpoint
     depends_on:
       - jaeger
+      - loki
     logging: *logging
 
   # Prometheus
